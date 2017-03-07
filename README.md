@@ -75,6 +75,12 @@ $ ./bin/mesos-agent.sh --master=127.0.0.1:5050 --work_dir=/var/lib/mesos
 ```
 $ http://127.0.0.1:5050
 ```
+Mesos运行效果如图所示（从上至下分别为：master运行状况、agent运行状况、本地网页）：
+![](https://github.com/DJAKN/Lab-of-microcomputer-experiment/blob/master/master.jpg)
+<br><br>
+![](https://github.com/DJAKN/Lab-of-microcomputer-experiment/blob/master/agent.jpg)
+<br><br>
+![](https://github.com/DJAKN/Lab-of-microcomputer-experiment/blob/master/webpage.jpg)
 <br>
 ##四、运行 Spark
 (1. 下载 Spark 2.1.0
@@ -88,8 +94,14 @@ $ http://127.0.0.1:5050
 
 ./bin/spark-submit   --class org.apache.spark.examples.JavaWordCount   --master mesos://127.0.0.1:5050  --executor-memory 600M   --total-executor-cores 4   file:///home/usrname/Desktop/spark-2.1.0-bin-hadoop2.7/examples/jars/spark-examples_2.11-2.1.0.jar   /home/usrname/Desktop/o
 ```
-处理结果和各自的运行时间如图所示：
-
+处理结果和各自的运行时间如图所示（从上至下分别为：1、2、4核运行结果，运行时间统计）：
+![](https://github.com/DJAKN/Lab-of-microcomputer-experiment/blob/master/1.jpg)
+<br><br>
+![](https://github.com/DJAKN/Lab-of-microcomputer-experiment/blob/master/2.jpg)
+<br><br>
+![](https://github.com/DJAKN/Lab-of-microcomputer-experiment/blob/master/4.jpg)
+<br><br>
+![](https://github.com/DJAKN/Lab-of-microcomputer-experiment/blob/master/0.jpg)<br>
 ##五、其他事项
 本作业完成过程中，有一大部分时间花在了 build Mesos 系统之上，这一系统配置需要的时间较长，在网络和硬件资源良好的情况下，make 和 make check 命令执行总共花费了大约 2.5 小时时间，这主要是由于之前不了解并行 -j 指令导致的，今后需要加强对于新情境下对工作带来显著帮助的新技术的学习。
 <br><br>
