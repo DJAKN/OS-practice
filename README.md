@@ -11,14 +11,15 @@ Mesos 在面对多个框架同时运行的情境时，具有较好的虚拟化�
 <br><br>
 在调研中了解到，Mesos 帮助 Twitter 解决了此前困扰其的服务器资源难以利用的问题，包括 Airbnb 和 eBay 在内的企业也是 Mesos 的用户。
 <br><br>
-##二、虚拟机和容器技术
+
+## 二、虚拟机和容器技术
 虚拟机是一个仿真的计算机系统。它可以在计算机平台和终端用户之间创建一种环境，用户基于这一环境来操作软件。虚拟机包括系统虚拟机和软件虚拟机，前者需要安装在宿主系统上，利用宿主系统分配的资源，虚拟出独立的 CPU、内存、硬盘等，为用户提供完整的一套操作系统服务，常用的 Vmware、VirtualBox 等平台提供这类服务；而后者则是类似 JVM 的机器。也有少数面向企业的虚拟机软件自带宿主操作系统，可以直接安装在一台裸机上。
 <br><br>
 容器是一些类、数据结构或抽象数据类型，它被实例为其他类的对象的集合。容器实际上是一种进程，它运行于一个独立的 命名空间之中，拥有自己的 root 文件系统和进程空间等。容器内的进程是运行在一个隔离的环境里，与虚拟机提供的环境类似。
 <br><br>
 与容器技术相比，虚拟机提供了更为完整的硬件虚拟化服务，功能更为强大，也因此而需要更大的启动和使用开销。容器技术由于直接利用硬件资源，具有比较高的硬件利用效率，但功能更为简单，在其上进行的一些操作也更可能对主系统产生不确定的影响，而虚拟机中的操作很难对宿主系统产生直接的影响。
 <br>
-##三、Mesos 的配置过程
+## 三、Mesos 的配置过程
 根据 Mesos 网站给出的配置方式，在 Ubuntu 16.04 中安装了Mesos。
 <br><br>
 (1. 下载 Mesos：
@@ -82,7 +83,7 @@ Mesos运行效果如图所示（从上至下分别为：master运行状况、age
 <br><br>
 ![](https://github.com/DJAKN/Lab-of-microcomputer-experiment/blob/master/webpage.jpg)
 <br>
-##四、运行 Spark
+## 四、运行 Spark
 (1. 下载 Spark 2.1.0
 <br><br>
 (2. 修改 spark-env.sh 和 spark.executor.uri 环境变量，在其中分别添加 MESOS_NATIVE_JAVA_LIBRARY=<path to libmesos.so>、 SPARK_EXECUTOR_URI=<URL of spark-2.1.0.tar.gz uploaded above> 和 <URL of spark-2.1.0.tar.gz> 条目。
@@ -102,7 +103,7 @@ Mesos运行效果如图所示（从上至下分别为：master运行状况、age
 ![](https://github.com/DJAKN/Lab-of-microcomputer-experiment/blob/master/4.jpg)
 <br><br>
 ![](https://github.com/DJAKN/Lab-of-microcomputer-experiment/blob/master/0.jpg)<br>
-##五、其他事项
+## 五、其他事项
 本作业完成过程中，有一大部分时间花在了 build Mesos 系统之上，这一系统配置需要的时间较长，在网络和硬件资源良好的情况下，make 和 make check 命令执行总共花费了大约 2.5 小时时间，这主要是由于之前不了解并行 -j 指令导致的，今后需要加强对于新情境下对工作带来显著帮助的新技术的学习。
 <br><br>
 Spark 在 Mesos 上的运行效果是相当显著的，处理规模较大的文本文件的速度比较好，表明了 Mesos 技术在利用集群系统中的优势。
