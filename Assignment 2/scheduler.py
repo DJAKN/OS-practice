@@ -23,7 +23,7 @@ class dice(Scheduler):
     total_prob = 0
     counter = 15
     tmp = 0
-
+    i = 0
     def __init__(self, executor):
         self.executor = executor
 
