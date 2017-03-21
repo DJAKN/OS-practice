@@ -10,24 +10,39 @@ import getpass
 from threading import Thread
 from os.path import abspath, join, dirname
 
-from pymesos import MesosSchedulerDriver, Scheduler, encode_data
+from pymesos import MesosSchedulerDriver, Scheduler, encode_data, decode_data
 from addict import Dict
 
-TASK_CPU = 0.1
+TASK_CPU = 1
 TASK_MEM = 32
-EXECUTOR_CPUS = 0.1
+EXECUTOR_CPUS = 0.5
 EXECUTOR_MEM = 32
 
 
-class MinimalScheduler(Scheduler):
+class dice(Scheduler):
+    total_prob = 0
+    counter = 15
+    tmp = 0
 
     def __init__(self, executor):
         self.executor = executor
 
+    def frameworkMessage(self, driver, executorId, slaveId, message):
+        self.total_prob = self.total_prob + float(decode_data(message))
+        self.tmp = self.tmp + 1
+        if self.tmp >= self.counter:
+            self.total_prob = self.total_prob/self.counter
+            print(self.total_prob)
+            driver.stop()
+
     def resourceOffers(self, driver, offers):
+        if self.i >= self.counter:
+            return None
         filters = {'refuse_seconds': 5}
 
         for offer in offers:
+            if self.i >= self.counter:
+                break
             cpus = self.getResource(offer.resources, 'cpus')
             mem = self.getResource(offer.resources, 'mem')
             if cpus < TASK_CPU or mem < TASK_MEM:
@@ -47,6 +62,7 @@ class MinimalScheduler(Scheduler):
             ]
 
             driver.launchTasks(offer.id, [task], filters)
+            self.i = self.i + 1
 
     def getResource(self, res, name):
         for r in res:
@@ -62,7 +78,7 @@ class MinimalScheduler(Scheduler):
 
 def main(master):
     executor = Dict()
-    executor.executor_id.value = 'MinimalExecutor'
+    executor.executor_id.value = 'PiExecutor'
     executor.name = executor.executor_id.value
     executor.command.value = '%s %s' % (
         sys.executable,
@@ -75,11 +91,11 @@ def main(master):
 
     framework = Dict()
     framework.user = getpass.getuser()
-    framework.name = "MinimalFramework"
+    framework.name = "PiFramework"
     framework.hostname = socket.gethostname()
 
     driver = MesosSchedulerDriver(
-        MinimalScheduler(executor),
+        dice(executor),
         framework,
         master,
         use_addict=True,
@@ -94,7 +110,7 @@ def main(master):
     driver_thread = Thread(target=run_driver_thread, args=())
     driver_thread.start()
 
-    print('Scheduler running, Ctrl+C to quit.')
+    print('Here is dice Scheduler running, press Ctrl+C to quit.')
     signal.signal(signal.SIGINT, signal_handler)
 
     while driver_thread.is_alive():
