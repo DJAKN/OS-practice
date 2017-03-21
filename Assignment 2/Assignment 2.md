@@ -92,3 +92,44 @@ Zookeeper 是一个 Apache 顶级项目。它是一个针对大型应用的数�
 
 DRF 算法的优点在于，提供了一种在多用户申请多种有限资源时较为公平的进行分配的方案。DRF 算法可以规避某一个框架大量占用某项资源导致剩余该项资源无法供给任务使用，从而造成资源的浪费。
 ## 五、简单工作的框架
+参考豆瓣的 `pymesos` 框架，通过修改该框架 `example` 中的 `scheduler.py` 和 `executor.py` 代码，验证大数定律。
+
+在 `executor.py` 中，通过 `random()` 函数每次产生一个介于 0 和 1 之间的伪随机数，若落在 0.1 与 0.2 之间，则计数加一，最后统计计数与总运行次数之比。每次运行产生随机数 1000000 次，共运行 `executor.py` 15 次。
+
+在 `scheduler.py` 中，对每次 `executor.py` 返回的计算结果相加，满 15 次后取平均值输出。
+
+与 `pymesos` 样例程序相比较，主要在以下代码段作出了扩充：
+```
+# scheduler.py
+class dice(Scheduler):
+    total_prob = 0
+    counter = 15
+    tmp = 0
+
+    def __init__(self, executor):
+        self.executor = executor
+
+    def frameworkMessage(self, driver, executorId, slaveId, message):
+        self.total_prob = self.total_prob + float(decode_data(message))
+        self.tmp = self.tmp + 1
+        if self.tmp >= self.counter:
+            self.total_prob = self.total_prob/self.counter
+            print(self.total_prob)
+            driver.stop()
+```
+
+```
+#executor.py
+            N = 1000000
+	    count = 0
+            for i in range(N):  
+                x = random()
+                if x >= 0.1:  
+			if x < 0.2:                
+				count += 1  
+            prob = count / N 
+            print(prob)
+            driver.sendFrameworkMessage(encode_data(str(prob)))
+ ```
+ 
+程序运行结果和后台监测情况、资源使用状况：
