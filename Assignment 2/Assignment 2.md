@@ -32,7 +32,8 @@ Zookeeper 是一个 Apache 顶级项目。它是一个针对大型应用的数�
 0. 得到资源后，agent 调用 executor 执行各个任务，并继续向 master 报告有多少资源可用。
 ## 二、框架在 Mesos 上的运行过程
 以 Spark on Mesos 为例。
-<br><br><br>
+![](Mesos流程.png)
+<br><br>
 大致运行架构如上图。Mesos master 代替 Cluster Manager 负责节点资源监控和资源列表更新工作。在 Mesos 接收用户提交的任务请求后，会将任务分配给集群中的一些工作节点执行。Spark 启动后，首先由 scheduler 向 master 注册，之后若收到了 master 分配的任务，则由 scheduler 根据 master 在 resource offer 中提供的资源情况，在框架内部进行调度，并将资源调度结果和剩余的空闲资源信息返回给 master，最后由 master 调度 executor 来执行任务。
 ### 与在传统操作系统上运行程序对比
 相似点：
@@ -40,4 +41,41 @@ Zookeeper 是一个 Apache 顶级项目。它是一个针对大型应用的数�
 + 都涉及多个任务共同执行时，资源的分配和调度问题。
 <br><br>
 不同点：
-+ 资源分配时决定
++ 运行环境不同：传统操作系统运行在一个工作节点上，而 Mesos 需要同时控制多个工作节点，这种结构性的差异导致 Mesos 必须设计一系列完全不同于传统操作系统的结构（如 master 和 agent 各自的功能、模块化的调度策略等）来适应用户需求。
++ 资源分配时的决定主体不同：传统操作系统中一般在系统分配资源后就默认被接收，而 Mesos 中由框架的 scheduler 决定是否接收。
++ 监管者的数量不同：传统操作系统由单一的操作系统进程管理全部系统资源，如果这一进程被意外杀死则整个系统崩溃；Mesos 利用 Zookeeper 管理多个 master，如果前台 master 运行出现问题，将启用后台的 master 代替。这也是由于集群崩溃的代价远大于单一节点崩溃的代价而作出的专门性调整。
+## 三、master 和 slave 的初始化过程
+### master 初始化
+#### 1. 解析命令行参数
+`/src/master/main.cpp`中的 `main()` 函数提供了 master 初始化的功能。
+
+首先，在第 218-275 行，利用 Google gflags 包解析命令行参数并设置环境变量：
+```
+  if (flags.advertise_ip.isSome()) {
+    os::setenv("LIBPROCESS_ADVERTISE_IP", flags.advertise_ip.get());
+  }
+```
+这段代码即是通过 `advertise_ip` 参数来设置环境变量 `LIBPROCESS_ADVERTISE_IP`。
+#### 2. 处理并输出 build 信息
+277-306 行，输出 master 的版本号、build 信息、warning 信息等。
+#### 3. 初始化libprocess库
+调用`process::initialize()`函数。
+#### 4. 初始化防火墙和模块信息
+310-364 行，设置防火墙禁用的 endpoint，并再一次读取命令行参数，调用 `ModuleManager::load()` 函数加载模块，再创建匿名模块。
+#### 5. 初始化 hooks
+366-372 行，用于在 master 初始化完成之后的某些情境内代替正常的节点返回值。
+#### 6. 初始化 allocator 并创建实例
+374-382 行，调用`Allocator::create()`完成。
+#### 7. 初始化与注册相关的其他实例
+376-560 行，设置注册信息存储空间、状态信息等事项。
+#### 8. 启动 master 线程
+562-577 行，创建 master 实例，监听消息并开始执行 master.
+### agent 初始化
+`/src/slave/main.cpp` 中的`main()`函数提供了 agent 初始化的功能。其中一部分功能与 master 启动过程基本一致，这里只列举有所区别的部分。
+#### 1. 初始化 fcher 和 containerizer
+493-509 行，二者均用于创建 agent 的运行环境。
+#### 2. 创建 master dectector
+511 行，用于初始监测并联系 master.
+#### 3. 创建 authorizer 和 gc
+513-548 行，负责监测和回收资源。
+## 四、Mesos 的资源调度算法
