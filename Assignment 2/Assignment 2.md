@@ -4,6 +4,8 @@ Report for Assignment 2
 
 Mesos 架构主要分为三部分：Master, Agent, Frameworks. 其中 Frameworks 又可以被分为 Scheduler 和 Executor. 各个部分之间的关联结构如论文中插图所示：
 
+![](architecture3.jpg)
+
 ### master
 master 代码位于 /src/master 目录下。
 master 在 Mesos 架构中居于核心位置。master 负责管理每一个集群节点上运行的 agent 守护进程，以及 agent 上执行具体任务的 frameworks.
@@ -13,18 +15,18 @@ master 的资源分配机制可能需要根据不同运行状况和节点需求�
 <br><br>
 在实际应用中，常常会有多个 master 同时存在的情况，它们互为备份，防止由于某一个 master 终止运行造成整个系统意外停止。Mesos 使用 Zookeeper 管理多个 master，并选择其中一个作为主节点执行各项功能。
 ### agent
-agent 在一些旧的文档中被称为 slave，代码位于 /src/sched 和 /src/slave 目录下。
+agent 在一些旧的文档中被称为 slave，代码位于 `/src/sched` 和 `/src/slave` 目录下。
 <br><br>
 agent 一方面向处于运行状态的 master 报告目前节点上的空闲资源，从而更新 resource offer 的资源列表，另一方面接收 master 关于分配资源和执行任务的指令，将资源分配给具体 framework 的 executor.
 ### frameworks
-frameworks 分为 scheduler 和 executor 两部分，负责具体执行某一个任务时的资源调度和执行工作，代码分别位于 /src/scheduler 和 /src/executor 目录下。
+frameworks 分为 scheduler 和 executor 两部分，负责具体执行某一个任务时的资源调度和执行工作，代码分别位于 `/src/scheduler` 和 `/src/executor` 目录下。
 scheduler 负责与 master 交流目前 framework 运行需要哪些资源，以及 master 能够提供哪些资源。scheduler 向 master 注册框架信息后，master 会不断告知 scheduler 目前有哪些资源可用，由 scheduler 决定是否接受。若是，scheduler 还需要在接收资源并在节点内部进行分配后，告知 master 各项资源的具体分配信息。
 <br><br>
 executor 负责在接收资源后具体执行任务。新的框架加入集群时也需要 executor 启动框架。
 ### Zookeeper
 Zookeeper 是一个 Apache 顶级项目。它是一个针对大型应用的数据管理、提供应用程序协调服务的分布式服务框架，提供的功能包括：配置维护、统一命名服务、状态同步服务、集群管理等。在生产环境中， Zookeeper 能够通过同时监控多个 master 在前台或后台运行或挂起，为 Mesos 提供一致性服务。
 <br><br>
-代码位于 /src/zookeeper 目录下。
+代码位于 `/src/zookeeper` 目录下。
 ### 工作流程
 1. master 监控各个 agent 运行情况，不断更新资源列表，用 resource offer 向各个 scheduler 提供资源 offer.
 2. agent 每隔一段时间向 master 更新可用资源情况。
@@ -86,7 +88,11 @@ Zookeeper 是一个 Apache 顶级项目。它是一个针对大型应用的数�
 >
 >根据 DRF 算法的思想，可以解得给用户 A 分配 3 份资源，用户 B 分配 2 份资源是一个很好的选择。算法伪代码为：
 >
+>![](20140217102020156.png)
+>
 >分配过程如下表所示，注意，每一次选择为哪个资源分配的决定，取决于上次分配之后，目前 dominant share 最小的那个用户可以得到下一次的资源分配。
+>
+>![](20140217102025890.png)
 >
 >在这个例子中，用户 A 的 CPU 占总 CPU 1/9，MEM 占总 MEM 的 2/9，而用户 B 的 CPU 占 1/3，MEM占 2/9，所以 A 的主资源为内存，B 的主资源为 CPU。基于这点，DRF 会最大化 A 的内存的最小化分配，并会最大化 B 的 CPU 的最小分配。
 
@@ -133,3 +139,9 @@ class dice(Scheduler):
  ```
  
 程序运行结果和后台监测情况、资源使用状况：
+
+![](a2%20result1.png)
+
+![](a2%20result2.png)
+
+![](a2%20result3.png)
