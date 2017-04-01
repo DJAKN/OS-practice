@@ -22,12 +22,12 @@ Mesos 在面对多个框架同时运行的情境时，具有较好的虚拟化�
 ## 三、Mesos 的配置过程
 根据 Mesos 网站给出的配置方式，在 Ubuntu 16.04 中安装了Mesos。
 <br><br>
-(1. 下载 Mesos：
+1. 下载 Mesos：
 ```
 $ wget http://www.apache.org/dist/mesos/1.1.0/mesos-1.1.0.tar.gz
 $ tar -zxf mesos-1.1.0.tar.gz
 ```
-(2. 安装必要的包和依赖库等：
+2. 安装必要的包和依赖库等：
 ```
 # Update the packages.
 $ sudo apt-get update
@@ -41,7 +41,7 @@ $ sudo apt-get install -y openjdk-8-jdk
 # Install other Mesos dependencies.
 $ sudo apt-get -y install build-essential python-dev libcurl4-nss-dev libsasl2-dev libsasl2-modules maven libapr1-dev libsvn-dev zlib1g-dev
 ```
-(3. Mesos 安装和配置（make 和 make check 操作都需要相当长的时间，可以采用 -j 并行运行的方式）：
+3. Mesos 安装和配置（make 和 make check 操作都需要相当长的时间，可以采用 -j 并行运行的方式）：
 ```
 # Change working directory.
 $ cd mesos
@@ -61,7 +61,7 @@ $ make check
 # Install
 $ make install
 ```
-(4. 在本地启动一个 host 和一个 agent：
+4. 在本地启动一个 host 和一个 agent：
 ```
 # Change into build directory.
 $ cd build
@@ -72,7 +72,7 @@ $ ./bin/mesos-master.sh --ip=127.0.0.1 --work_dir=/var/lib/mesos
 # Start mesos agent (Ensure work directory exists and has proper permissions).
 $ ./bin/mesos-agent.sh --master=127.0.0.1:5050 --work_dir=/var/lib/mesos
 ```
-(5. 访问系统页面：
+5. 访问系统页面：
 ```
 $ http://127.0.0.1:5050
 ```
@@ -84,10 +84,10 @@ Mesos运行效果如图所示（从上至下分别为：master运行状况、age
 ![](https://github.com/DJAKN/Lab-of-microcomputer-experiment/blob/master/webpage.jpg)
 <br>
 ## 四、运行 Spark
-(1. 下载 Spark 2.1.0
+1. 下载 Spark 2.1.0
 <br><br>
-(2. 修改 spark-env.sh 和 spark.executor.uri 环境变量，在其中分别添加 MESOS_NATIVE_JAVA_LIBRARY=<path to libmesos.so>、 SPARK_EXECUTOR_URI=<URL of spark-2.1.0.tar.gz uploaded above> 和 <URL of spark-2.1.0.tar.gz> 条目。
-(3. 考虑到本机 CPU 资源为四核的 Intel i5 处理器和 4GB 内存，分别利用 Spark 在分配 1、2 和 4 个核以及 600MB 内存的情况下运行 Wordcount.java 程序，对一个大小约为 220MB 的英文文本文件进行处理，相应代码为：
+2. 修改 spark-env.sh 和 spark.executor.uri 环境变量，在其中分别添加 MESOS_NATIVE_JAVA_LIBRARY=<path to libmesos.so>、 SPARK_EXECUTOR_URI=<URL of spark-2.1.0.tar.gz uploaded above> 和 <URL of spark-2.1.0.tar.gz> 条目。
+3. 考虑到本机 CPU 资源为四核的 Intel i5 处理器和 4GB 内存，分别利用 Spark 在分配 1、2 和 4 个核以及 600MB 内存的情况下运行 Wordcount.java 程序，对一个大小约为 220MB 的英文文本文件进行处理，相应代码为：
 ```
 ./bin/spark-submit   --class org.apache.spark.examples.JavaWordCount   --master mesos://127.0.0.1:5050  --executor-memory 600M   --total-executor-cores 1   file:///home/usrname/Desktop/spark-2.1.0-bin-hadoop2.7/examples/jars/spark-examples_2.11-2.1.0.jar   /home/usrname/Desktop/o
 
