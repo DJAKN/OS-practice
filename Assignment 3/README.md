@@ -199,11 +199,75 @@ docker run -it --network none ubuntu /bin/bash
 同时，网络管理指令不能断开 null 模式的网络。
 
 #### bridge
-
 在这一模式中，docker 守护进程创建了一个虚拟以太网桥 docker0，附加在其上的任何网卡之间都能自动转发数据包。默认情况下，守护进程会创建一对对等接口，将其中一个接口设置为容器的 eth0 接口，另一个接口放置在宿主机的命名空间中，从而将宿主机上的所有容器都连接到这个内部网络上。同时，守护进程还会从网桥的私有地址空间中分配一个 IP 地址和子网给该容器。
+
+通过以下命令启动 bridge 模式的 container:
+```
+docker run -i -t mysql:latest /bin/bash
+docker run -i -t --net="bridge" mysql:latest /bin/bash
+```
+容器可以加入多个 bridge 网络。通过```docker network connect```或```docker network disconnect```来自由连接或断开 bridge 网络。
+
+#### host
+这一模式中，将禁用 docker 容器的网络隔离。因为容器共享了宿主机的网络命名空间，将其直接暴露在公共网络中。因此，需要通过 port mapping 来进行协调。
+
+host 模式的优点在于，容器可以直接使用宿主机的 IP 地址与外界通信，同时容器内服务的端口也可以使用宿主机的端口，无需进行额外的 NAT 转换。 但是容器不再拥有隔离、独立的网络栈也带来了一些问题。 另外，host 模式的容器虽然可以令其内部的服务和传统情况无差别、无改造的使用，但是由于网络隔离性的弱化，该容器会与宿主机共享竞争网络栈的使用；另外，容器内部将不再拥有所有的端口资源，因为部分端口资源可能已经被宿主机本身的服务占用。
+
+通过以下命令启动 host 模式的 container:
+```
+docker run -it --network host ubuntu /bin/bash。
+```
+
+#### overlay
+这一模式使用 docker 内置的 swarm 来管理结点，首先在第一台主机上输入```docker swarm init```，便会创建一个 swarm 的管理结点。 之后在其他主机上输入```docker swarm join```，即可将它们加入 worker 之中，在第一台主机可以通过```docker node ls```查看这些 worker. 
+
+overlay 模式主要用于 docker 服务和集群的创建。相比于只能在本地网络中访问的模式，overlay网络通过一个新的网段来管理一个集群，通过注册的方式来发现新结点，避免了普通模式下跨主机通讯的繁琐过程。
 
 ### 五、mesos 与 docker 的交互
 
+代码位于```mesos-1.1.0/src/docker```文件夹中。
+#### docker.cpp
+docker.hpp 头文件中定义了 Docker 类，该类内部又定义了 Container 和 Image 两个类。```docker.cpp``` 封装了一些 docker 使用的 API，比较重要的包括：
+
+```create``` 创建容器或者创建镜像
+
+```run```运行docker
+
+```stop```停止运行 docker
+
+```kill```杀死docker
+
+```rm```删除docker
+
+#### executor.cpp
+实现了 mesos framework 的一个 executor, 调用```docker.cpp```中的一系列 API 管理 docker.
+
+#### spec.cpp
+负责解析 JSON 格式的 INFO 信息。
+
+#### run 函数
+
+1. 检查docker info 是否存在并获取 docker info：
+```
+if (!containerInfo.has_docker()) {
+    return Failure("No docker info found in container info");
+  }
+  
+const ContainerInfo::DockerInfo& dockerInfo = containerInfo.docker();
+```
+2. 添加命令行参数
+```
+vector<string> argv;
+argv.push_back(path);
+argv.push_back("-H");
+argv.push_back(socket);
+argv.push_back("run");
+
+if (dockerInfo.privileged()) {
+    argv.push_back("--privileged");
+  }
+```
+3. 
 ### 六、framework，以容器的方式运行 task
 
 使用豆瓣提供的```pymesos```框架，在本任务中只需要编写 scheduler 即可。主要完成了 docker, container, task 等的基本属性设定和启动工作，见以下部分：
