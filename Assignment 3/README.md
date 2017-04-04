@@ -102,13 +102,13 @@ docker network COMMAND
 
 | Command	| Description |
 | ------| ------ |
-docker network connect | 将容器连接到网络
-docker network create | 创建一个网络
-docker network disconnect	| 将容器与网络断开连接
-docker network inspect | 展示网络的细节信息
-docker network ls	| 列出所有网络
-docker network prune | 移除所有未被使用的网络
-docker network rm	| 移除一个或多个网络
+```docker network connect``` | 将容器连接到网络
+```docker network create``` | 创建一个网络
+```docker network disconnect```	| 将容器与网络断开连接
+```docker network inspect``` | 展示网络的细节信息
+```docker network ls```	| 列出所有网络
+```docker network prune``` | 移除所有未被使用的网络
+```docker network rm```	| 移除一个或多个网络
 
 **例子**
 ```
@@ -267,8 +267,135 @@ if (dockerInfo.privileged()) {
     argv.push_back("--privileged");
   }
 ```
-3. 
-### 六、framework，以容器的方式运行 task
+3. 分配 CPU 资源，并添加环境变量
+```
+  if (resources.isSome()) {
+    // TODO(yifan): Support other resources (e.g. disk).
+    Option<double> cpus = resources.get().cpus();
+    if (cpus.isSome()) {
+      uint64_t cpuShare =
+        std::max((uint64_t) (CPU_SHARES_PER_CPU * cpus.get()), MIN_CPU_SHARES);
+      argv.push_back("--cpu-shares");
+      argv.push_back(stringify(cpuShare));
+    }
+
+    Option<Bytes> mem = resources.get().mem();
+    if (mem.isSome()) {
+      Bytes memLimit = std::max(mem.get(), MIN_MEMORY);
+      argv.push_back("--memory");
+      argv.push_back(stringify(memLimit.bytes()));
+    }
+  }
+
+  if (env.isSome()) {
+    foreachpair (string key, string value, env.get()) {
+      argv.push_back("-e");
+      argv.push_back(key + "=" + value);
+    }
+  }
+  
+...
+
+argv.push_back("-e");
+  argv.push_back("MESOS_SANDBOX=" + mappedDirectory);
+  argv.push_back("-e");
+  argv.push_back("MESOS_CONTAINER_NAME=" + name);
+```
+4. 检查磁盘挂载信息，设置命令行参数。
+```
+Option<string> volumeDriver;
+  foreach (const Volume& volume, containerInfo.volumes()) {
+  
+  ...
+  
+  }
+```
+5. ```--net```网络配置，```sandbox```目录映射到```mapped```
+```
+argv.push_back("-v");
+  argv.push_back(sandboxDirectory + ":" + mappedDirectory);
+
+  // TODO(gyliu513): Deprecate this after the release cycle of 1.0.
+  // It will be replaced by Volume.Source.DockerVolume.driver.
+  if (dockerInfo.has_volume_driver()) {
+    if (volumeDriver.isSome() &&
+        volumeDriver.get() != dockerInfo.volume_driver()) {
+      return Failure("Only one volume driver per task is supported");
+    }
+
+    volumeDriver = dockerInfo.volume_driver();
+  }
+
+  if (volumeDriver.isSome()) {
+    argv.push_back("--volume-driver=" + volumeDriver.get());
+  }
+
+  const string& image = dockerInfo.image();
+
+argv.push_back("--net");
+string network;
+switch (dockerInfo.network()) {
+    ...
+}
+argv.push_back(network);
+```
+6. 检查和重写 entrypoint
+```
+if (commandInfo.shell()) {
+    argv.push_back("--entrypoint");
+    argv.push_back("/bin/sh");
+}
+```
+7. 添加容器名和指定镜像名
+```
+argv.push_back("--name");
+argv.push_back(name);
+argv.push_back(image);
+```
+8. 添加运行容器后的命令和参数
+```
+if (commandInfo.shell()) {
+    if (!commandInfo.has_value()) {
+      return Failure("Shell specified but no command value provided");
+    }
+
+    // Adding -c here because Docker cli only supports a single word
+    // for overriding entrypoint, so adding the -c flag for /bin/sh
+    // as part of the command.
+    argv.push_back("-c");
+    argv.push_back(commandInfo.value());
+  } else {
+    if (commandInfo.has_value()) {
+      argv.push_back(commandInfo.value());
+    }
+
+    foreach (const string& argument, commandInfo.arguments()) {
+      argv.push_back(argument);
+    }
+  }
+
+  string cmd = strings::join(" ", argv);
+
+  LOG(INFO) << "Running " << cmd;
+
+  map<string, string> environment = os::environment();
+
+  // NOTE: This is non-relevant to pick up a docker config file,
+  // which is necessary for private registry.
+  environment["HOME"] = sandboxDirectory;
+```
+9. 运行容器
+```
+Try<Subprocess> s = subprocess(
+      path,
+      argv,
+      Subprocess::PATH("/dev/null"),
+      _stdout,
+      _stderr,
+      nullptr,
+      environment);
+```
+### 六、编写 framework，以容器的方式运行 task
 
 使用豆瓣提供的```pymesos```框架，在本任务中只需要编写 scheduler 即可。主要完成了 docker, container, task 等的基本属性设定和启动工作，见以下部分：
 ```
