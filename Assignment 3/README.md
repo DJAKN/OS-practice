@@ -18,6 +18,7 @@ Report for Assignment 3
 docker images [OPTIONS] [REPOSITORY[:TAG]]
 ```
 在本机执行的结果：
+![](2.png)
 <br><br>
 **选项**
 
@@ -165,6 +166,7 @@ sudo docker run -i -t --name assignment3 -p 9999:80 ubuntu /bin/bash
 设置容器名称为```assignment3```，将容器的 80 端口映射到 host 9999 端口。执行命令后系统会自动 pull 缺少的```ubuntu:latest```.
 
 完成后终端状态如下：
+![](3.png)
 
 ### 2. 加入 nginx 服务器
 
@@ -184,13 +186,14 @@ vim index.nginx-debian.html
 修改服务器主页，显示姓名和学号。
 
 修改完成后，从主机访问 127.0.0.1:9999, 显示如下页面：
+![](4.png)
 
 ### 4. 利用 tail 命令将访问日志输出到标准输出流
 ```
 tail -f /var/log/nginx/access.log
 ```
 输出结果如下：
-
+![](5.png)
 
 ### 5. 创建一个自己定义的 network
 ```
@@ -433,7 +436,7 @@ Try<Subprocess> s = subprocess(
 ```
 ## 六、编写 framework，以容器的方式运行 task
 
-使用豆瓣提供的```pymesos```框架，在本任务中只需要编写 scheduler 即可。主要完成了 docker, container, task 等的基本属性设定和启动工作，见以下部分：
+使用豆瓣提供的```pymesos```框架，在本任务中只需要编写 scheduler 即可。代码见 [framework.py](framework.py), 主要完成了 docker, container, task 等的基本属性设定和启动工作，见以下部分：
 ```
 			#information of container
 			ContainerInfo = Dict()
