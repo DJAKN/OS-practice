@@ -115,12 +115,12 @@ docker network COMMAND
 
 **例子**
 ```
-docker network create -d bridge bridge-network 
+$ docker network create -d bridge bridge-network 
 ```
 用 bridge 网络驱动创建一个名为 bridge-network 的网络。
 
 ```
-docker network ls -q 
+$ docker network ls -q 
 ```
 打印所有网络的 ID. （```-q```参数表示仅打印网络 ID ）
 
@@ -139,7 +139,10 @@ docker network ls -q
 
 **例子**
 
-```$ docker version --format '{{.Server.Version}}'```
+```
+$ docker version --format '{{.Server.Version}}'
+```
+
 显示服务器版本
 
 ### 5. docker search
@@ -154,14 +157,15 @@ docker network ls -q
 **例子**
 
 ```
-docker search busybox
+$ docker search busybox
 ```
+
 显示所有名字含有```busybox```的镜像的信息
 
 ## 三、nginx 服务器和 network 配置
 ### 1. 创建一个基础镜像为 ubuntu 的 docker 镜像
 ```
-sudo docker run -i -t --name assignment3 -p 9999:80 ubuntu /bin/bash
+$ sudo docker run -i -t --name assignment3 -p 9999:80 ubuntu /bin/bash
 ```
 设置容器名称为```assignment3```，将容器的 80 端口映射到 host 9999 端口。执行命令后系统会自动 pull 缺少的```ubuntu:latest```.
 
@@ -171,17 +175,17 @@ sudo docker run -i -t --name assignment3 -p 9999:80 ubuntu /bin/bash
 ### 2. 加入 nginx 服务器
 
 ```
-apt update
-apt install nginx -y
-apt install vim
-nginx
+$ apt update
+$ apt install nginx -y
+$ apt install vim
+$ nginx
 ```
-安装 nginx 并启动，同时为了便于后续文本操作，在容器中安装了 vim.
+安装 nginx 并启动，同时为了便于后续文本操作，在容器中安装了 ```vim```.
 
 ### 3. 编辑 web 服务器主页
 ```
-cd /var/www/html/
-vim index.nginx-debian.html
+$ cd /var/www/html/
+$ vim index.nginx-debian.html
 ```
 修改服务器主页，显示姓名和学号。
 
@@ -190,23 +194,23 @@ vim index.nginx-debian.html
 
 ### 4. 利用 tail 命令将访问日志输出到标准输出流
 ```
-tail -f /var/log/nginx/access.log
+$ tail -f /var/log/nginx/access.log
 ```
 输出结果如下：
 ![](5.png)
 
 ### 5. 创建一个自己定义的 network
 ```
-exit
-sudo docker commit assignment3 netimage
-sudo docker run -d --name netserver -p 9999:80 netimage nginx -g 'daemon off;'
+$ exit
+$ sudo docker commit assignment3 netimage
+$ sudo docker run -d --name netserver -p 9999:80 netimage nginx -g 'daemon off;'
 ```
 退出容器，保存镜像并创建新容器以运行新镜像。
 
 ```
-sudo docker network create anetwork
-sudo docker network connect anetwork netserver
-sudo docker network inspect anetwork
+$ sudo docker network create anetwork
+$ sudo docker network connect anetwork netserver
+$ sudo docker network inspect anetwork
 ```
 创建自己定义的 network，并连入网络，检查 network 信息。
 
@@ -217,7 +221,7 @@ network 信息如下：
 ### 6. host 访问网站
 
 ```
-sudo docker inspect netserver
+$ sudo docker inspect netserver
 ```
 获取网站 IP 地址，为```127.17.0.2```.
 
@@ -233,7 +237,7 @@ sudo docker inspect netserver
 2. 用户希望自定义网络时。
 可以通过以下命令启动 null 模式的 container:
 ```
-docker run -it --network none ubuntu /bin/bash
+$ docker run -it --network none ubuntu /bin/bash
 ```
 同时，网络管理指令不能断开 null 模式的网络。
 
@@ -242,8 +246,8 @@ docker run -it --network none ubuntu /bin/bash
 
 通过以下命令启动 bridge 模式的 container:
 ```
-docker run -i -t mysql:latest /bin/bash
-docker run -i -t --net="bridge" mysql:latest /bin/bash
+$ docker run -i -t mysql:latest /bin/bash
+$ docker run -i -t --net="bridge" mysql:latest /bin/bash
 ```
 容器可以加入多个 bridge 网络。通过```docker network connect```或```docker network disconnect```来自由连接或断开 bridge 网络。
 
@@ -254,7 +258,7 @@ host 模式的优点在于，容器可以直接使用宿主机的 IP 地址与�
 
 通过以下命令启动 host 模式的 container:
 ```
-docker run -it --network host ubuntu /bin/bash。
+$ docker run -it --network host ubuntu /bin/bash。
 ```
 
 ### overlay
@@ -287,7 +291,7 @@ docker.hpp 头文件中定义了 Docker 类，该类内部又定义了 Container
 ### run 函数
 
 1. 检查docker info 是否存在并获取 docker info：
-```
+```c++
 if (!containerInfo.has_docker()) {
     return Failure("No docker info found in container info");
   }
@@ -295,7 +299,7 @@ if (!containerInfo.has_docker()) {
 const ContainerInfo::DockerInfo& dockerInfo = containerInfo.docker();
 ```
 2. 添加命令行参数
-```
+```c++
 vector<string> argv;
 argv.push_back(path);
 argv.push_back("-H");
@@ -307,7 +311,7 @@ if (dockerInfo.privileged()) {
   }
 ```
 3. 分配 CPU 资源，并添加环境变量
-```
+```c++
   if (resources.isSome()) {
     // TODO(yifan): Support other resources (e.g. disk).
     Option<double> cpus = resources.get().cpus();
@@ -341,7 +345,7 @@ argv.push_back("-e");
   argv.push_back("MESOS_CONTAINER_NAME=" + name);
 ```
 4. 检查磁盘挂载信息，设置命令行参数。
-```
+```c++
 Option<string> volumeDriver;
   foreach (const Volume& volume, containerInfo.volumes()) {
   
@@ -350,7 +354,7 @@ Option<string> volumeDriver;
   }
 ```
 5. ```--net```网络配置，```sandbox```目录映射到```mapped```
-```
+```c++
 argv.push_back("-v");
   argv.push_back(sandboxDirectory + ":" + mappedDirectory);
 
@@ -379,20 +383,20 @@ switch (dockerInfo.network()) {
 argv.push_back(network);
 ```
 6. 检查和重写 entrypoint
-```
+```c++
 if (commandInfo.shell()) {
     argv.push_back("--entrypoint");
     argv.push_back("/bin/sh");
 }
 ```
 7. 添加容器名和指定镜像名
-```
+```c++
 argv.push_back("--name");
 argv.push_back(name);
 argv.push_back(image);
 ```
 8. 添加运行容器后的命令和参数
-```
+```c++
 if (commandInfo.shell()) {
     if (!commandInfo.has_value()) {
       return Failure("Shell specified but no command value provided");
@@ -424,7 +428,7 @@ if (commandInfo.shell()) {
   environment["HOME"] = sandboxDirectory;
 ```
 9. 运行容器
-```
+```c++
 Try<Subprocess> s = subprocess(
       path,
       argv,
@@ -437,7 +441,7 @@ Try<Subprocess> s = subprocess(
 ## 六、编写 framework，以容器的方式运行 task
 
 使用豆瓣提供的```pymesos```框架，在本任务中只需要编写 scheduler 即可。代码见 [framework.py](framework.py), 主要完成了 docker, container, task 等的基本属性设定和启动工作，见以下部分：
-```
+```python
 			#information of container
 			ContainerInfo = Dict()
 			ContainerInfo.type = 'DOCKER'
