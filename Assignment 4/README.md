@@ -276,7 +276,7 @@ mount -t overlay overlay -o lowerdir=/lower, upperdir=/upper, workdir=/work/merg
   docker run -v /html:/html -p 4040:80 -d --name assignment3 as4 nginx -g 'daemon off;'
   ```
 
-+ 修改 1002 的 4040 端口转发，即可从服务器 IP 地址的 4040 端口（http://162.105.174.38:4040/）访问主页
++ 修改 1002 的 4040 端口转发，即可从服务器 IP 地址的 4040 端口（ http://162.105.174.38:4040/ ）访问主页
 
   ![](11.png)
 
