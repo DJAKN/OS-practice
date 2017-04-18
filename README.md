@@ -86,8 +86,8 @@ Mesos运行效果如图所示（从上至下分别为：master运行状况、age
 ## 四、运行 Spark
 1. 下载 Spark 2.1.0
 <br><br>
-2. 修改 spark-env.sh 和 spark.executor.uri 环境变量，在其中分别添加 MESOS_NATIVE_JAVA_LIBRARY=<path to libmesos.so>、 SPARK_EXECUTOR_URI=<URL of spark-2.1.0.tar.gz uploaded above> 和 <URL of spark-2.1.0.tar.gz> 条目。
-3. 考虑到本机 CPU 资源为四核的 Intel i5 处理器和 4GB 内存，分别利用 Spark 在分配 1、2 和 4 个核以及 600MB 内存的情况下运行 Wordcount.java 程序，对一个大小约为 220MB 的英文文本文件进行处理，相应代码为：
+2. 修改 ```spark-env.sh``` 和 ```spark.executor.uri``` 环境变量，在其中分别添加 ```MESOS_NATIVE_JAVA_LIBRARY=<path to libmesos.so>``` 、 ```SPARK_EXECUTOR_URI=<URL of spark-2.1.0.tar.gz uploaded above>``` 和 ```<URL of spark-2.1.0.tar.gz>``` 条目。
+3. 考虑到本机硬件资源为四核的 Intel i5 处理器和 4GB 内存，分别利用 Spark 在分配 1、2 和 4 个核以及 600MB 内存的情况下运行 ```Wordcount.java``` 程序，对一个大小约为 220 MB 的英文文本文件进行处理，相应代码为：
 ```
 ./bin/spark-submit   --class org.apache.spark.examples.JavaWordCount   --master mesos://127.0.0.1:5050  --executor-memory 600M   --total-executor-cores 1   file:///home/usrname/Desktop/spark-2.1.0-bin-hadoop2.7/examples/jars/spark-examples_2.11-2.1.0.jar   /home/usrname/Desktop/o
 
@@ -104,6 +104,6 @@ Mesos运行效果如图所示（从上至下分别为：master运行状况、age
 <br><br>
 ![](https://github.com/DJAKN/Lab-of-microcomputer-experiment/blob/master/0.jpg)<br>
 ## 五、其他事项
-本作业完成过程中，有一大部分时间花在了 build Mesos 系统之上，这一系统配置需要的时间较长，在网络和硬件资源良好的情况下，make 和 make check 命令执行总共花费了大约 2.5 小时时间，这主要是由于之前不了解并行 -j 指令导致的，今后需要加强对于新情境下对工作带来显著帮助的新技术的学习。
+本作业完成过程中，有一大部分时间花在了 build Mesos 系统之上，这一系统配置需要的时间较长，在网络和硬件资源良好的情况下，```make``` 和 ```make check``` 命令执行总共花费了大约 2.5 小时时间，这主要是由于之前不了解并行 ```-j``` 指令导致的，今后需要加强对于新情境下对工作带来显著帮助的新技术的学习。
 <br><br>
 Spark 在 Mesos 上的运行效果是相当显著的，处理规模较大的文本文件的速度比较好，表明了 Mesos 技术在利用集群系统中的优势。
