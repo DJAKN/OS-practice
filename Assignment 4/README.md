@@ -45,11 +45,7 @@ GlusterFS 主要由存储服务器（BrickServer）、客户端以及 NFS/Samba 
 
 工作流程如图所示：
 
-<<<<<<< HEAD
-![](2.png)
-=======
 ![](2.jpg)
->>>>>>> 1d41f98510b7c0f512077322fe3a4829a3654284
 
 1. 在服务器端，每台服务器上运行 GlusterFs，将本地文件系统的一部分暴露给用户。
 2. 在客户端， 用户通过 GlusterFS 的 mount point 操作来读写数据， 对于用户来说，集群系统的存在对用户是完全透明的，用户感觉不到是操作本地系统还是远端的集群系统。
@@ -89,11 +85,7 @@ HDFS 将文件切分为多个 block 并分散存储与多个数据节点上。�
 
 整体架构图如下：
 
-<<<<<<< HEAD
-![](3.png)
-=======
 ![](3.gif)
->>>>>>> 1d41f98510b7c0f512077322fe3a4829a3654284
 
 当用户访问文件时，客户端通过调用 open 方法打开被请求的的文件，调用 NameNode 获取文件块的位置信息，对于元文件存储的每一个块，NameNode 返回含有该块副本的 DataNode 的结点地址，并根据网络拓扑结构确定从最近的一个 DataNode 获取数据块的副本。读文件完成后，关闭连接。
 
@@ -146,11 +138,7 @@ OverlayFS 是一个面向 Linux 的文件系统服务，实现了一个面向其
 
 OverlayFS 使用两个层，把一个目录置放于另一个之上，并且对外提供单个统一的视角。这种分层的技术被称作 union mount。下层的目录被称为 lowerdir，上层的为 upperdir。下图展示了 Docker 镜像和 Docker 容器在 OverlayFS 中是如何分层的：
 
-<<<<<<< HEAD
-![](4.png)
-=======
 ![](4.jpg)
->>>>>>> 1d41f98510b7c0f512077322fe3a4829a3654284
 
 在使用过程中，对于 upperdir 中存在的文件，OverlayFS 直接其提交给用户；而对于 upperdir 没有但 lowerdir 有的文件，则把 lowerdir 的提交给用户。在写入时，对 upperdir 的文件直接写入，对来自 lowerdir 的文件进行 CoW。另外，OverlayFS 会对合并之后的文件系统的文件列表做一个 cache，使得对全部文件基本信息的访问操作能够执行得更快。
 
@@ -288,7 +276,6 @@ mount -t overlay overlay -o lowerdir=/lower, upperdir=/upper, workdir=/work/merg
   docker run -v /html:/html -p 4040:80 -d --name assignment3 as4 nginx -g 'daemon off;'
   ```
 
-<<<<<<< HEAD
 + 修改 1002 的 4040 端口转发，即可从服务器 IP 地址的 4040 端口（http://162.105.174.38:4040/）访问主页
 
   ![](11.png)
@@ -385,18 +372,3 @@ mount -t overlay overlay -o lowerdir=/lower, upperdir=/upper, workdir=/work/merg
   ```
 
   可以在新容器中使用 ```vim``` 和 ```Python3``` 了。
-
-  ​
-
-  ​
-
-  ​
-
-  ​
-
-=======
-+ 修改 1002 的 4040 端口转发，即可从服务器 IP 地址的 4040 端口（ http://162.105.174.38:4040/ ）访问主页
-
-  ![](11.png)
-
->>>>>>> 1d41f98510b7c0f512077322fe3a4829a3654284
