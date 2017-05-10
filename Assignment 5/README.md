@@ -222,6 +222,7 @@ Weave 是除了 Calico 之外的另一个容器网络项目。同样具有每台
 + calico 系统的三层结构相当于为容器网络提供了可靠性高的保护机制。
 
 - calico 系统基于 iptable/linux 机制，kernel 包转发效率高，损耗低。
+<<<<<<< HEAD
 
 ### calico 的缺点
 
@@ -381,3 +382,5 @@ docker network create --driver calico --ipam-driver calico-ipam --subnet=192.168
 nohup configurable-http-proxy --default-target=http://192.168.0.100:8888 --ip=172.16.6.231 --port=8888 > http_proxy.log 2>&1 &
 ```
 
+=======
+>>>>>>> 4024c170f6c686df393b17218f1ff43957a30cbf
