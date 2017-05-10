@@ -1,6 +1,5 @@
 Report for Assignment 5
-
----
+----
 
 # 一、 Linux 内核如何对 IP 数据包进行处理
 
@@ -29,7 +28,6 @@ Linux 系统包括两个重要的处理网络数据包的工具，分别为 netf
 + 在没有足够的公有 IP 地址的情况下，使用 NAT 和伪装技术共享互联网访问
 + 使用 NAT 技术实现透明代理
 + 支持用于构建复杂的 QoS 和策略路由器的 tc 和 iproute2 系统
-
 
 
 # 二、用 iptables 完成功能
@@ -215,7 +213,7 @@ Weave 是除了 Calico 之外的另一个容器网络项目。同样具有每台
 
 类似于 calico，weave 为集群中的每一个节点设置一个虚拟的路由器 weave router，由 weave routers 组成的对等端点构成了 weave 网络，每个对等的一端都有自己的名字，其中包括一个可读性好的名字用于表示状态和日志的输出，一个唯一标识符用于运行中相互区别，即使重启 Docker，主机的名字也保持不变，这些名字默认是主机的 MAC 地址。
 
-每当 weave 所创建的网桥和容器之间建立 veth 时，weave 为每个容器分配 IP 地址和掩码。weave 利用 TCP 和 UDP 通信机制。weave 的控制面由 weave routers 之间建立的TCP连接构成，通过它进行握手和拓扑关系信息的交换通信。 这一通信过程可以被配置为加密通信。而数据面由Weave routers之间建立的 UDP 连接构成，这些连接大部分都会加密。这些连接都是全双工的，并且可以穿越防火墙。
+每当 weave 所创建的网桥和容器之间建立 veth 时，weave 为每个容器分配 IP 地址和掩码。weave 利用 TCP 和 UDP 通信机制。weave 的控制面由 weave routers 之间建立的 TCP 连接构成，通过它进行握手和拓扑关系信息的交换通信。 这一通信过程可以被配置为加密通信。而数据面由 weave routers 之间建立的 UDP 连接构成，这些连接大部分都会加密。这些连接都是全双工的，并且可以穿越防火墙。
 
 ## weave 和 calico 优缺点比较
 
@@ -227,15 +225,159 @@ Weave 是除了 Calico 之外的另一个容器网络项目。同样具有每台
 
 ### calico 的缺点
 
-- Calico仅支持TCP, UDP, ICMP andICMPv6协议。
-- Calico没有加密数据路径。 用不可信网络上的Calico建立覆盖网络是不安全的。
-- 没有IP重叠支持。
+- calico 在公有网络上安全性难以得到保证 。
 
 ### weave 的优点
 
-- 支持主机间通信加密。
-- 支持跨主机多子网通信。
+- 支持主机间的通信加密。
+- 数据通信可以跨过防火墙。
 
 ### weave 的缺点
 
-- 网络封装是一种传输开销，对网络性能会有影响，不适用于对网络性能要求高的生产场景
+- 在性能门槛比较高的情境下，weave 的网络数据封装机制会带来较严重的负面影响。
+
+# docker 容器集群搭建和 jupyter notebook 部署
+
+## 准备工作
+
+在三台虚拟机上安装 calico，etcd 和 configurable-http-proxy
+
+```
+sudo su
+apt install etcd
+wget -O /usr/local/bin/calicoctl https://github.com/projectcalico/calicoctl/releases/download/v1.1.3/calicoctl
+chmod +x /usr/local/bin/calicoctl
+apt install -y npm nodejs-legacy
+npm install -g configurable-http-proxy
+```
+
+关闭 etcd 后台程序的自动开启设置
+
+```
+service etcd stop
+```
+
+根据 etcd 文档说明，在三台主机上创建 etcd 网络节点
+
+```
+etcd --name a0 --initial-advertise-peer-urls http://172.16.6.44:2380   --listen-peer-urls http://172.16.6.44:2380  --listen-client-urls http://172.16.6.44:2379,http://127.0.0.1:2379  --advertise-client-urls http://172.16.6.44:2379    --initial-cluster-token etcd-cluster-1    --initial-cluster a0=http://172.16.6.44:2380,a1=http://172.16.6.218:2380,a2=http://172.16.6.231:2380    --initial-cluster-state new
+
+etcd --name a1  --initial-advertise-peer-urls http://172.16.6.218:2380   --listen-peer-urls http://172.16.6.218:2380  --listen-client-urls http://172.16.6.218:2379,http://127.0.0.1:2379  --advertise-client-urls http://172.16.6.218:2379    --initial-cluster-token etcd-cluster-1    --initial-cluster a0=http://172.16.6.44:2380,a1=http://172.16.6.218:2380,a2=http://172.16.6.231:2380    --initial-cluster-state new
+
+etcd --name a2 --initial-advertise-peer-urls http://172.16.6.231:2380   --listen-peer-urls http://172.16.6.231:2380  --listen-client-urls http://172.16.6.231:2379,http://127.0.0.1:2379  --advertise-client-urls http://172.16.6.231:2379    --initial-cluster-token etcd-cluster-1    --initial-cluster a0=http://172.16.6.44:2380,a1=http://172.16.6.218:2380,a2=http://172.16.6.231:2380    --initial-cluster-state new
+```
+
+在三台主机上检查 etcd 节点网络连接情况
+
+```
+etcdctl cluster-health
+```
+
+发现在 1001 主机上显示，1000 节点配置有问题。1000 节点无法与其他两个节点连接。这个问题困扰了我很久，查阅了一些方法也没能解决。后面的实验也无法再使用 1000 主机，只能暂时使用 1001 和 1002 两台主机进行。
+
+在 1001 上使用以下命令删除连接有问题的 1000 节点
+
+```
+etcdctl member remove 39d3ae671acb2956 
+```
+
+再次检查发现网络状况良好
+
+```
+member 60defe631adb895d is healthy: got healthy result from http://172.16.6.218:2379
+member a6aa42b32ec008e9 is healthy: got healthy result from http://172.16.6.231:2379
+cluster is healthy
+```
+
+修改 docker daemon
+
+```
+#1001
+service docker stop
+dockerd --cluster-store etcd://172.16.6.218:2379 &
+
+#1002
+service docker stop
+dockerd --cluster-store etcd://172.16.6.231:2379 &
+```
+
+分别启动 calico 容器
+
+```
+calicoctl node run --ip 172.16.6.218 --name node1
+
+calicoctl node run --ip 172.16.6.231 --name node2
+```
+
+在 1001 主机创建 IP 池
+
+```
+cat << EOF | calicoctl create -f -
+- apiVersion: v1
+  kind: ipPool
+  metadata:
+    cidr: 192.0.2.0/24
+EOF
+```
+
+分别用 ```vim``` 在两台主机编写 jupyter 和 dockerfile 镜像并制作
+
+```
+FROM ubuntu:latest
+
+RUN apt-get update
+RUN apt-get install python3-pip
+RUN apt-get install ssh
+
+RUN pip3 install jupyter
+
+RUN useradd -m calico
+RUN adduser admin sudo
+RUN echo "admin:calico" | chpasswd
+RUN mkdir /var/run/sshd
+
+USER calico
+WORKDIR /home/calico
+EXPOSE 22
+CMD ["jupyter","notebook","--NotebookApp.token=","--ip=192.168.0.1","--port=8888"]
+```
+
+```
+FROM ubuntu:latest
+
+RUN apt update
+RUN apt install -y sudo ssh
+
+RUN useradd -ms /bin/bash admin
+RUN adduser admin sudo
+RUN echo 'admin:admin' | chpasswd
+
+RUN mkdir /var/run/sshd
+
+RUN mkdir /home/admin/first_folder
+USER admin
+WORKDIR /home/admin
+
+EXPOSE 22
+CMD ["/usr/sbin/sshd", "-D"]
+```
+
+创建镜像
+
+```
+docker build -t jupyter
+docker build -t ssh_image
+```
+
+在 1001 主机创建 calico 容器网络
+
+```
+docker network create --driver calico --ipam-driver calico-ipam --subnet=192.168.0.0/16 netv
+```
+
+在 1002 主机设置端口转发
+
+```
+nohup configurable-http-proxy --default-target=http://192.168.0.100:8888 --ip=172.16.6.231 --port=8888 > http_proxy.log 2>&1 &
+```
+
