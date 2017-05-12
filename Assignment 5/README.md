@@ -69,9 +69,9 @@ iptables -D INPUT 5
 
 ![](4.png)
 
-## 拒绝来自某一特定 mac 地址的访问
+## 拒绝来自某一特定 MAC 地址的访问
 
-利用 ```ifconfig``` 命令查询 -1001 主机网卡 MAC地址为 02:42:fd:03:1e:d1，在 -1000 主机内用以下命令拒绝 -1001 主机的访问：
+利用 ```ifconfig``` 命令查询 -1001 主机网卡 MAC 地址为 02:42:fd:03:1e:d1，在 -1000 主机内用以下命令拒绝 -1001 主机的访问：
 
 ```
 iptables -A INPUT -m mac --mac-source 02:00:2f:47:00:01 -j REJECT
@@ -222,7 +222,6 @@ Weave 是除了 Calico 之外的另一个容器网络项目。同样具有每台
 + calico 系统的三层结构相当于为容器网络提供了可靠性高的保护机制。
 
 - calico 系统基于 iptable/linux 机制，kernel 包转发效率高，损耗低。
-<<<<<<< HEAD
 
 ### calico 的缺点
 
@@ -274,43 +273,19 @@ etcd --name a2 --initial-advertise-peer-urls http://172.16.6.231:2380   --listen
 etcdctl cluster-health
 ```
 
-发现在 1001 主机上显示，1000 节点配置有问题。1000 节点无法与其他两个节点连接。这个问题困扰了我很久，查阅了一些方法也没能解决。后面的实验也无法再使用 1000 主机，只能暂时使用 1001 和 1002 两台主机进行。
-
-在 1001 上使用以下命令删除连接有问题的 1000 节点
-
-```
-etcdctl member remove 39d3ae671acb2956 
-```
-
-再次检查发现网络状况良好
-
-```
-member 60defe631adb895d is healthy: got healthy result from http://172.16.6.218:2379
-member a6aa42b32ec008e9 is healthy: got healthy result from http://172.16.6.231:2379
-cluster is healthy
-```
-
-修改 docker daemon
-
-```
-#1001
-service docker stop
-dockerd --cluster-store etcd://172.16.6.218:2379 &
-
-#1002
-service docker stop
-dockerd --cluster-store etcd://172.16.6.231:2379 &
-```
+发现在 1001 主机上显示，1000 节点配置有问题。1000 节点无法与其他两个节点连接。这个问题困扰了我很久，后来发现是由于此前在 1000 主机上进行的实验修改了它的 iptables，组织了转发，将相关命令清除即可回复正常。
 
 分别启动 calico 容器
 
 ```
+calicoctl node run --ip 172.16.6.44 --name node0
+
 calicoctl node run --ip 172.16.6.218 --name node1
 
 calicoctl node run --ip 172.16.6.231 --name node2
 ```
 
-在 1001 主机创建 IP 池
+在 1000 主机创建 IP 池
 
 ```
 cat << EOF | calicoctl create -f -
@@ -321,7 +296,7 @@ cat << EOF | calicoctl create -f -
 EOF
 ```
 
-分别用 ```vim``` 在两台主机编写 jupyter 和 dockerfile 镜像并制作
+分别用 ```vim``` 在三台主机编写 jupyter 和 dockerfile 镜像并制作
 
 ```
 FROM ubuntu:latest
@@ -370,17 +345,201 @@ docker build -t jupyter
 docker build -t ssh_image
 ```
 
-在 1001 主机创建 calico 容器网络
+在 1000 主机创建 calico 容器网络
 
 ```
 docker network create --driver calico --ipam-driver calico-ipam --subnet=192.168.0.0/16 netv
 ```
 
-在 1002 主机设置端口转发
+在 1001 和 1002 主机设置端口转发
 
 ```
+nohup configurable-http-proxy --default-target=http://192.168.0.100:8888 --ip=172.16.6.218 --port=8888 > http_proxy.log 2>&1 &
+
 nohup configurable-http-proxy --default-target=http://192.168.0.100:8888 --ip=172.16.6.231 --port=8888 > http_proxy.log 2>&1 &
 ```
 
-=======
->>>>>>> 4024c170f6c686df393b17218f1ff43957a30cbf
+在 1000 主机启动 ```scheduler.py```
+
+```
+#!/usr/bin/env python2.7
+from __future__ import print_function
+
+import subprocess
+import sys
+import uuid
+import time
+import socket
+import signal
+import getpass
+from threading import Thread
+from os.path import abspath, join, dirname
+
+from pymesos import MesosSchedulerDriver, Scheduler, encode_data
+from addict import Dict
+
+TASK_CPU = 0.1
+TASK_MEM = 128
+TASK_NUM = 5
+EXECUTOR_CPUS = 0.1
+EXECUTOR_MEM = 32
+
+agent_map = Dict()
+AGENT_1 = '68f2vd61-bn02-48h2-9fg1-2cf548g1ed76-S1'
+AGENT_2 = 'df20t631-sf03-451b-4dfv-nh5481g56edc-S0'
+AGENT_3 = 'df20t631-sf03-451b-4dfv-nh5481g56edc-S1'
+
+class NotebookScheduler(Scheduler):
+
+    def __init__(self):
+        self.launched_task = 0
+
+    def resourceOffers(self, driver, offers):
+        filters = {'refuse_seconds': 5}
+        
+		if self.task_launched == TASK_NUM:
+            return
+            
+        for offer in offers:
+            cpus = self.getResource(offer.resources, 'cpus')
+            mem = self.getResource(offer.resources, 'mem')
+            if self.launched_task == TASK_NUM:
+                return
+            if cpus < TASK_CPU or mem < TASK_MEM:
+                continue
+
+            if self.launched_task == 0:
+                ip = Dict()
+                ip.key = 'ip'
+                ip.value = '192.168.0.100'
+
+                hostname = Dict()
+                hostname.key = 'hostname'
+                hostname.value = 'cluster'
+
+                NetworkInfo = Dict()
+                NetworkInfo.name = 'my_net'
+
+                DockerInfo = Dict()
+                DockerInfo.image = 'jupyter'
+                DockerInfo.network = 'USER'
+                DockerInfo.parameters = [ip, hostname]
+                ContainerInfo = Dict()
+                ContainerInfo.type = 'DOCKER'
+                ContainerInfo.docker = DockerInfo
+                ContainerInfo.network_infos = [NetworkInfo]
+                CommandInfo = Dict()
+                CommandInfo.shell = False
+                task = Dict()
+                task_id = 'node0'
+                task.task_id.value = task_id
+                task.agent_id.value = offer.agent_id.value
+                task.name = 'Docker jupyter task'
+                task.container = ContainerInfo
+                task.command = CommandInfo
+                task.resources = [
+                    dict(name='cpus', type='SCALAR', scalar={'value': TASK_CPU}),
+                    dict(name='mem', type='SCALAR', scalar={'value': TASK_MEM}),
+                ]
+                self.launched_task += 1
+                driver.launchTasks(offer.id, [task], filters)
+                global agent_map
+                num = agent_map[task.agent_id.value]
+
+                args = ['/usr/local/bin/configurable-http-proxy']
+                if num == 0:
+                    args.append('--default-target=http://192.168.0.100:8888')
+                elif num == 1:
+                    args.append('--default-target=http://172.16.6.218:8888')
+                else:
+                    args.append('--default-target=http://172.16.6.231:8888')
+
+                args.append('--ip=172.16.6.44')
+                args.append('--port=8888')
+                subprocess.Popen(args)
+
+            else:
+                ip = Dict()
+                ip.key = 'ip'
+                ip.value = '192.168.0.10' + str(self.launched_task)
+                hostname = Dict()
+                hostname.key = 'hostname'
+                hostname.value = 'cluster'
+                NetworkInfo = Dict()
+                NetworkInfo.name = 'my_net'
+                DockerInfo = Dict()
+                DockerInfo.image = 'ssh_image'
+                DockerInfo.network = 'USER'
+                DockerInfo.parameters = [ip, hostname]
+                ContainerInfo = Dict()
+                ContainerInfo.type = 'DOCKER'
+                ContainerInfo.docker = DockerInfo
+                ContainerInfo.network_infos = [NetworkInfo]
+                CommandInfo = Dict()
+                CommandInfo.shell = False
+                task = Dict()
+                task_id = str(self.launched_task)
+                task.task_id.value = task_id
+                task.agent_id.value = offer.agent_id.value
+                task.name = 'Docker normal task'
+                task.container = ContainerInfo
+                task.command = CommandInfo
+                task.resources = [
+                    dict(name='cpus', type='SCALAR', scalar={'value': TASK_CPU}),
+                    dict(name='mem', type='SCALAR', scalar={'value': TASK_MEM}),
+                ]
+                self.launched_task += 1
+                driver.launchTasks(offer.id, [task], filters)
+
+    def getResource(self, res, name):
+        for r in res:
+            if r.name == name:
+                return r.scalar.value
+        return 0.0
+
+    def statusUpdate(self, driver, update):
+        logging.debug('Status update TID %s %s',
+                      update.task_id.value,
+                      update.state)
+
+def main(master):
+
+    # Framework info
+    framework = Dict()
+    framework.user = getpass.getuser()
+    framework.name = "JupyterFramework"
+    framework.hostname = socket.gethostname()
+
+    # Use default executor
+    driver = MesosSchedulerDriver(
+        JupyterScheduler(),
+        framework,
+        master,
+        use_addict=True,
+    )
+
+    def signal_handler(signal, frame):
+        driver.stop()
+
+    def run_driver_thread():
+        driver.run()
+
+    driver_thread = Thread(target=run_driver_thread, args=())
+    driver_thread.start()
+
+    print('Scheduler running, Ctrl+C to quit.')
+    signal.signal(signal.SIGINT, signal_handler)
+    while driver_thread.is_alive():
+        time.sleep(1)
+
+if __name__ == '__main__':
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+    if len(sys.argv) < 2:
+        print("Usage: {} <mesos_master> <number of agent> [agent_id ...]".format(sys.argv[0]))
+        sys.exit(1)
+    else:
+        main(sys.argv[1])
+```
+
+可以完成对 jupyter notebook 的访问。
