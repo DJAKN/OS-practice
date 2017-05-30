@@ -74,3 +74,6 @@ Raft 一致性协议将整个通信过程分为三个阶段，leader election，
 
 # 三、Mesos 的容错机制
 
+Mesos 包括一个运行中的 master 节点和多个备用 master 节点，由 zookeeper 进行监控。当运行中的 master 节点发生故障时，zookeeper 负责启动新 master 的选举工作。建议的节点总数是 5 个，实际上，生产环境至少需要 3 个 master 节点。 
+
+Mesos 将 master 设计为持有软件状态，这意味着当 master 节点发生故障时，其状态可以很快地在新选举的 master 节点上重建。 Mesos 的状态信息实际上驻留在Framework 调度器和 Slave 节点集合之中。当一个新的 master 当选后，zookeeper 会通知 Framework 和选举后的 Slave 节点集合，使其在新的 master 上被注册。彼时，新的 master 可以根据 Framework 和 Slave 节点集合发送过来的信息，重建内部状态。
