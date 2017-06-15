@@ -372,7 +372,4 @@ mount -t overlay overlay -o lowerdir=/lower, upperdir=/upper, workdir=/work/merg
   ```
 
   可以在新容器中使用 ```vim``` 和 ```Python3``` 了。
-<<<<<<< HEAD
 
-=======
->>>>>>> 7af78575330137bba42d2e1562365911d943560e
