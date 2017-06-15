@@ -77,3 +77,70 @@ Raft 一致性协议将整个通信过程分为三个阶段，leader election，
 Mesos 包括一个运行中的 master 节点和多个备用 master 节点，由 zookeeper 进行监控。当运行中的 master 节点发生故障时，zookeeper 负责启动新 master 的选举工作。建议的节点总数是 5 个，实际上，生产环境至少需要 3 个 master 节点。 
 
 Mesos 将 master 设计为持有软件状态，这意味着当 master 节点发生故障时，其状态可以很快地在新选举的 master 节点上重建。 Mesos 的状态信息实际上驻留在Framework 调度器和 Slave 节点集合之中。当一个新的 master 当选后，zookeeper 会通知 Framework 和选举后的 Slave 节点集合，使其在新的 master 上被注册。彼时，新的 master 可以根据 Framework 和 Slave 节点集合发送过来的信息，重建内部状态。
+
+如果 slave 或 executor 出错，mesos 会将错误信息提交给相应的 scheduler 进行处理；而如果 scheduler 出错，master 将会通知同一个 framework 注册的其他 scheduler 继续进行工作。
+
+## 验证容错机制
+
+安装配置 zookeeper
+
+```
+wget http://mirror.nexcess.net/apache/zookeeper/stable/zookeeper-3.4.10.tar.gz
+tar -zxf zookeeper-3.4.10.tar.gz
+```
+
+分别修改三台主机的 zookeeper 配置文件
+
+```
+cd zookeeper-3.4.10/
+cd conf/
+cp zoo_sample.cfg zoo.cfg
+
+vim zoo.cfg
+
+# 修改dataDir一项
+dataDir=/var/lib/zookeeper
+
+# 添加master server信息
+server1=172.16.6.44:2888:3888
+server2=172.16.6.218:2888:3888
+server3=172.16.6.231:2888:3888
+```
+
+在三台主机的 ```/var/lib/zookeeper/``` 目录下创建 ```myid``` 文件，分别写入 1、2 或 3
+
+```
+sudo su
+#1000
+root@oo-lab:/home/pkusei/zookeeper-3.4.10# mkdir /var/lib/zookeeper
+root@oo-lab:/home/pkusei/zookeeper-3.4.10# echo "1" > /var/lib/zookeeper/myid
+#1001
+root@oo-lab:/home/pkusei/zookeeper-3.4.10# mkdir /var/lib/zookeeper
+root@oo-lab:/home/pkusei/zookeeper-3.4.10# echo "2" > /var/lib/zookeeper/myid
+#1002
+root@oo-lab:/home/pkusei/zookeeper-3.4.10# mkdir /var/lib/zookeeper
+root@oo-lab:/home/pkusei/zookeeper-3.4.10# echo "3" > /var/lib/zookeeper/myid
+```
+
+分别启动 master
+
+```
+mesos master --zk=zk://172.16.6.44:2181,172.16.6.218:2181,172.16.6.231:2181/mesos --quorum=2 --ip=172.16.6.44  --hostname=mas1 --work_dir=/var/lib/mesos --log_dir=/var/log/mesos
+
+mesos master --zk=zk://172.16.6.44:2181,172.16.6.218:2181,172.16.6.231:2181/mesos --quorum=2 --ip=172.16.6.218 --hostname=mas2 --work_dir=/var/lib/mesos --log_dir=/var/log/mesos
+
+mesos master --zk=zk://172.16.6.44:2181,172.16.6.218:2181,172.16.6.231:2181/mesos --quorum=2 --ip=172.16.6.231 --hostname=mas3 --work_dir=/var/lib/mesos --log_dir=/var/log/mesos
+```
+
+在日志中可以看到选举信息，发现 1000 主机被选举为 master
+
+![](7.png)
+
+如果 kill 掉 1000 主机的 master 进程，将在 1001 主机中看到如下信息
+
+![](8.png)
+
+这表明 1001 主机被选举为了新的 master
+
+# 综合作业
+
