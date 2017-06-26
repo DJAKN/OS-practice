@@ -381,7 +381,7 @@ docker run -d --net my_net --ip 192.168.0.104 -v /home/pkusei/b6/docker:/ssh_inf
 
 ## scheduler
 
-在第五次作业的 scheduler 基础上进行修改，主要扩展了维护共享文件卷和网络的语句，摘录如下：
+在第五次作业的 scheduler 基础上进行了修改，主要扩展了维护共享文件卷和网络的语句，摘录如下：
 
 ```python
 	ip = Dict()
